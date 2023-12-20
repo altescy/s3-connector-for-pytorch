@@ -1,9 +1,9 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  // SPDX-License-Identifier: BSD
 
-from ._s3dataset_common import parse_s3_uri
-from ._s3client import S3Client
 from . import S3Reader, S3Writer
+from ._s3client import S3Client
+from ._s3dataset_common import parse_s3_uri
 
 
 class S3Checkpoint:
@@ -16,7 +16,7 @@ class S3Checkpoint:
     torch.load, and torch.save.
     """
 
-    def __init__(self, region: str):
+    def __init__(self, region: str) -> None:
         self.region = region
         self._client = S3Client(region)
 

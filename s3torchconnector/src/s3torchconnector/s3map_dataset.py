@@ -1,19 +1,15 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  // SPDX-License-Identifier: BSD
 from functools import partial
-from typing import List, Any, Callable, Iterable, Union
+from typing import Any, Callable, Iterable, List, Optional, Union
 
 import torch.utils.data
+
 from s3torchconnector._s3bucket_key import S3BucketKey
 
-from ._s3client import S3Client
 from . import S3Reader
-
-from ._s3dataset_common import (
-    get_objects_from_uris,
-    get_objects_from_prefix,
-    identity,
-)
+from ._s3client import S3Client
+from ._s3dataset_common import get_objects_from_prefix, get_objects_from_uris, identity
 
 
 class S3MapDataset(torch.utils.data.Dataset):
@@ -33,7 +29,7 @@ class S3MapDataset(torch.utils.data.Dataset):
         self._transform = transform
         self._region = region
         self._client = None
-        self._bucket_key_pairs = None
+        self._bucket_key_pairs: Optional[List[S3BucketKey]] = None
 
     @property
     def region(self):
@@ -42,6 +38,10 @@ class S3MapDataset(torch.utils.data.Dataset):
     @property
     def _dataset_bucket_key_pairs(self) -> List[S3BucketKey]:
         if self._bucket_key_pairs is None:
+            if self._get_dataset_objects is None:
+                raise RuntimeError(
+                    "Cannot get dataset objects without get_dataset_objects"
+                )
             self._bucket_key_pairs = list(self._get_dataset_objects(self._get_client()))
         return self._bucket_key_pairs
 

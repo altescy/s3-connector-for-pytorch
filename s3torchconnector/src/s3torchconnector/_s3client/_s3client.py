@@ -3,22 +3,20 @@
 
 import os
 from functools import partial
-from typing import Optional, Any
+from typing import Any, Optional
 
 from s3torchconnector import S3Reader, S3Writer
 from s3torchconnector._version import user_agent_prefix
-
 from s3torchconnectorclient._mountpoint_s3_client import (
+    GetObjectStream,
+    ListObjectStream,
     MountpointS3Client,
     ObjectInfo,
-    ListObjectStream,
-    GetObjectStream,
 )
-
 
 """
 _s3client.py
-    Internal client wrapper class on top of S3 client implementation 
+    Internal client wrapper class on top of S3 client implementation
     with multi-process support.
 """
 
@@ -30,8 +28,8 @@ def _identity(obj: Any) -> Any:
 class S3Client:
     def __init__(self, region: str):
         self._region = region
-        self._real_client = None
-        self._client_pid = None
+        self._real_client: Optional[MountpointS3Client] = None
+        self._client_pid: Optional[int] = None
 
     @property
     def _client(self) -> MountpointS3Client:
@@ -39,6 +37,7 @@ class S3Client:
             self._client_pid = os.getpid()
             # `MountpointS3Client` does not survive forking, so re-create it if the PID has changed.
             self._real_client = self._client_builder()
+        assert self._real_client is not None
         return self._real_client
 
     @property

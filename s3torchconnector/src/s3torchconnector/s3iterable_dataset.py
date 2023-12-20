@@ -1,18 +1,14 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  // SPDX-License-Identifier: BSD
 from functools import partial
-from typing import Iterator, Any, Union, Iterable, Callable
+from typing import Any, Callable, Iterable, Iterator, Optional, TypeVar, Union
 
 import torch.utils.data
 
 from . import S3Reader
 from ._s3bucket_key import S3BucketKey
 from ._s3client import S3Client
-from ._s3dataset_common import (
-    identity,
-    get_objects_from_uris,
-    get_objects_from_prefix,
-)
+from ._s3dataset_common import get_objects_from_prefix, get_objects_from_uris, identity
 
 
 class S3IterableDataset(torch.utils.data.IterableDataset):
@@ -27,14 +23,14 @@ class S3IterableDataset(torch.utils.data.IterableDataset):
         region: str,
         get_dataset_objects: Callable[[S3Client], Iterable[S3BucketKey]],
         transform: Callable[[S3Reader], Any] = identity,
-    ):
+    ) -> None:
         self._get_dataset_objects = get_dataset_objects
         self._transform = transform
         self._region = region
-        self._client = None
+        self._client: Optional[S3Client] = None
 
     @property
-    def region(self):
+    def region(self) -> str:
         return self._region
 
     @classmethod
@@ -44,7 +40,7 @@ class S3IterableDataset(torch.utils.data.IterableDataset):
         *,
         region: str,
         transform: Callable[[S3Reader], Any] = identity,
-    ):
+    ) -> "S3IterableDataset":
         """Returns an instance of S3IterableDataset using the S3 URI(s) provided.
 
         Args:
@@ -69,7 +65,7 @@ class S3IterableDataset(torch.utils.data.IterableDataset):
         *,
         region: str,
         transform: Callable[[S3Reader], Any] = identity,
-    ):
+    ) -> "S3IterableDataset":
         """Returns an instance of S3IterableDataset using the S3 URI provided.
 
         Args:
@@ -87,7 +83,7 @@ class S3IterableDataset(torch.utils.data.IterableDataset):
             region, partial(get_objects_from_prefix, s3_uri), transform=transform
         )
 
-    def _get_client(self):
+    def _get_client(self) -> S3Client:
         if self._client is None:
             self._client = S3Client(self.region)
         return self._client

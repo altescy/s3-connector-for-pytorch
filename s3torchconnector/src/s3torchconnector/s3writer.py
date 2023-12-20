@@ -10,16 +10,16 @@ from s3torchconnectorclient._mountpoint_s3_client import PutObjectStream
 class S3Writer(io.BufferedIOBase):
     """A write-only, file like representation of a single object stored in S3."""
 
-    def __init__(self, stream: PutObjectStream):
+    def __init__(self, stream: PutObjectStream) -> None:
         self.stream = stream
 
-    def __enter__(self):
+    def __enter__(self) -> "S3Writer":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
 
-    def write(self, data: Union[bytes, memoryview]) -> int:
+    def write(self, data: Union[bytes, memoryview]) -> int:  # type: ignore[override]
         """Write bytes to S3 Object specified by bucket and key
 
         Args:
@@ -36,7 +36,7 @@ class S3Writer(io.BufferedIOBase):
         self.stream.write(data)
         return len(data)
 
-    def close(self):
+    def close(self) -> None:
         """Close write-stream to S3. Ensures all bytes are written successfully.
 
         Raises:
@@ -44,7 +44,7 @@ class S3Writer(io.BufferedIOBase):
         """
         self.stream.close()
 
-    def flush(self):
+    def flush(self) -> None:
         """No-op"""
         pass
 

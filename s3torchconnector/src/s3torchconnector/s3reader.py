@@ -6,7 +6,7 @@ from functools import cached_property
 from io import SEEK_CUR, SEEK_END, SEEK_SET
 from typing import Callable, Optional
 
-from s3torchconnectorclient._mountpoint_s3_client import ObjectInfo, GetObjectStream
+from s3torchconnectorclient._mountpoint_s3_client import GetObjectStream, ObjectInfo
 
 
 class S3Reader(io.BufferedIOBase):
@@ -16,31 +16,33 @@ class S3Reader(io.BufferedIOBase):
         self,
         bucket: str,
         key: str,
-        get_object_info: Callable[[], ObjectInfo] = None,
-        get_stream: Callable[[], GetObjectStream] = None,
-    ):
+        get_object_info: Optional[Callable[[], ObjectInfo]] = None,
+        get_stream: Optional[Callable[[], GetObjectStream]] = None,
+    ) -> None:
         if not bucket:
             raise ValueError("Bucket should be specified")
         self._bucket = bucket
         self._key = key
         self._get_object_info = get_object_info
         self._get_stream = get_stream
-        self._stream = None
+        self._stream: Optional[GetObjectStream] = None
         self._buffer = io.BytesIO()
-        self._size = None
+        self._size: Optional[int] = None
         # Invariant: _position == _buffer._tell() unless _position_at_end()
         self._position = 0
 
     @property
-    def bucket(self):
+    def bucket(self) -> str:
         return self._bucket
 
     @property
-    def key(self):
+    def key(self) -> str:
         return self._key
 
     @cached_property
-    def _object_info(self):
+    def _object_info(self) -> ObjectInfo:
+        if self._get_object_info is None:
+            raise RuntimeError("Cannot get object info without get_object_info")
         return self._get_object_info()
 
     def prefetch(self) -> None:
@@ -51,6 +53,8 @@ class S3Reader(io.BufferedIOBase):
         """
 
         if self._stream is None:
+            if self._get_stream is None:
+                raise RuntimeError("Cannot prefetch without get_stream")
             self._stream = self._get_stream()
 
     def read(self, size: Optional[int] = None) -> bytes:
@@ -79,6 +83,10 @@ class S3Reader(io.BufferedIOBase):
         self.prefetch()
         cur_pos = self._position
         if size is None or size < 0:
+            if self._stream is None:
+                raise RuntimeError(
+                    "Please provide either get_stream or size to read file"
+                )
             # Special case read() all to use O(n) algorithm
             self._buffer.seek(0, SEEK_END)
             self._buffer.write(b"".join(self._stream))
@@ -138,6 +146,7 @@ class S3Reader(io.BufferedIOBase):
 
     def _prefetch_to_offset(self, offset: int) -> None:
         self.prefetch()
+        assert self._stream is not None, "prefetch() should have set _stream"
         buf_size = self._buffer.seek(0, SEEK_END)
         try:
             while offset > buf_size:
